@@ -4,48 +4,54 @@ using UnityEngine;
 
 namespace Leftovers.Neighbour
 {
-	// Token: 0x02000036 RID: 54
-	[Token(Token = "0x200001E")]
 	public class NeighbourLineRenderers : MonoBehaviour
 	{
-		// Token: 0x0600011E RID: 286 RVA: 0x00002050 File Offset: 0x00000250
-		[Token(Token = "0x600009A")]
-		[Address(RVA = "0x743620", Offset = "0x742A20", VA = "0x180743620")]
 		private void Start()
 		{
-		}
+            UnityEngine_LineRenderer_o* upperToFaceLine = this->fields.upperToFaceLine;
 
-		// Token: 0x0600011F RID: 287 RVA: 0x00002050 File Offset: 0x00000250
-		[Token(Token = "0x600009B")]
-		[Address(RVA = "0x743650", Offset = "0x742A50", VA = "0x180743650")]
+            if (!upperToFaceLine)
+                sub_180157B40(0);
+
+            UnityEngine_LineRenderer__set_positionCount(upperToFaceLine, 2, 0);
+        }
+
 		private void Update()
 		{
-		}
+            UnityEngine_Transform_o* upperTop = this->fields.upperTop;
+            UnityEngine_LineRenderer_o* upperToFaceLine = this->fields.upperToFaceLine;
+            UnityEngine_Vector3_o positionVec;
+            UnityEngine_Vector3_o tempVec[2];
 
-		// Token: 0x06000120 RID: 288 RVA: 0x00002050 File Offset: 0x00000250
-		[Token(Token = "0x600009C")]
-		[Address(RVA = "0x1E0E10", Offset = "0x1E0210", VA = "0x1801E0E10")]
+            if (!upperTop || !upperToFaceLine)
+                sub_180157B40(this);
+
+            UnityEngine_Transform__get_position(tempVec, upperTop, 0);
+            positionVec = *tempVec;
+            UnityEngine_LineRenderer__SetPosition(upperToFaceLine, 0, &positionVec, 0);
+
+            UnityEngine_Transform_o* faceBottom = this->fields.faceBottom;
+            UnityEngine_LineRenderer_o* line = this->fields.upperToFaceLine;
+
+            if (!faceBottom || !line)
+                sub_180157B40(this);
+
+            UnityEngine_Transform__get_position(tempVec, faceBottom, 0);
+            positionVec = *tempVec;
+            UnityEngine_LineRenderer__SetPosition(line, 1, &positionVec, 0);
+        }
+
 		public NeighbourLineRenderers()
 		{
-		}
+            UnityEngine_Terrain___ctor((UnityEngine_Terrain_o*)this, 0);
+        }
 
-		// Token: 0x04000139 RID: 313
-		[Token(Token = "0x40000CE")]
-		[FieldOffset(Offset = "0x18")]
-		[Attribute(Name = "HeaderAttribute", RVA = "0xA5B80", Offset = "0xA4F80")]
 		[SerializeField]
 		private LineRenderer upperToFaceLine;
 
-		// Token: 0x0400013A RID: 314
-		[Token(Token = "0x40000CF")]
-		[FieldOffset(Offset = "0x20")]
-		[Attribute(Name = "HeaderAttribute", RVA = "0xA5BD0", Offset = "0xA4FD0")]
 		[SerializeField]
 		private Transform upperTop;
 
-		// Token: 0x0400013B RID: 315
-		[Token(Token = "0x40000D0")]
-		[FieldOffset(Offset = "0x28")]
 		[SerializeField]
 		private Transform faceBottom;
 	}
