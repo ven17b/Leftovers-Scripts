@@ -1,5 +1,7 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using Leftovers.Player;
 
 namespace Leftovers.Utilities
 {
@@ -7,141 +9,114 @@ namespace Leftovers.Utilities
 	{
 		public void EnablePlayerControls()
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            instance.handleKeyboardInput = true;
-            Cursor.lockState = CursorLockMode.Locked;
-        }
+			instance.handleKeyboardInput = true;
+			Cursor.lockState = CursorLockMode.Locked;
+		}
 
 		public void DisablePlayerControls()
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            instance.handleKeyboardInput = false;
-            Cursor.lockState = CursorLockMode.None;
-        }
+			instance.handleKeyboardInput = false;
+			Cursor.lockState = CursorLockMode.None;
+		}
 
 		public void EnablePlayerMovement()
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            instance.handleKeyboardInput = true;
-        }
+			instance.handleKeyboardInput = true;
+		}
 
 		public void DisablePlayerMovement()
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            instance.handleKeyboardInput = false;
-        }
+			instance.handleKeyboardInput = false;
+		}
 
 		public void SetPlayerLookAt(Transform lookAt)
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            instance.lookAt = lookAt;
-        }
+			instance.SetLookAt(lookAt);
+		}
 
 		public void StartPlayerZoomIn(float duration)
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            float zoomAmount = instance.zoomAmount;
-            instance.zoomDuration = duration;
-            instance.zoomStartAmount = zoomAmount;
-            instance.zoomTimer = 0f;
-            instance.zoomPhase = 1;
-        }
+			instance.StartZoomIn(duration);
+		}
 
 		public void StartPlayerZoomOut(float duration)
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            Debug.Log("Starting player zoom out");
-
-            float zoomAmount = instance.zoomAmount;
-            instance.zoomDuration = duration;
-            instance.zoomStartAmount = zoomAmount;
-            instance.zoomTimer = 0f;
-            instance.zoomPhase = 2;
-        }
+			instance.StartZoomOut(duration);
+		}
 
 		public void ClearPlayerLookAt()
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            instance.lookAt = null;
-        }
+			instance.SetLookAt(null);
+		}
 
 		public void CopyCameraTransform(Transform copier)
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null || instance.cameraContainer == null || copier == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null || copier == null)
+				return;
 
-            copier.position = instance.cameraContainer.position;
-            copier.rotation = instance.cameraContainer.rotation;
-        }
+			instance.CopyCameraTransform(copier);
+		}
 
 		public void ResumeGame()
 		{
-            var instance = Leftovers_Player_PlayerController.instance;
-            if (instance == null || instance.pauseMenu == null)
-                return;
+			PlayerController instance = PlayerController.Instance;
+			if (instance == null)
+				return;
 
-            if (instance.pausedMouse)
-            {
-                instance.handleMouseInput = true;
-                Cursor.lockState = CursorLockMode.Locked;
-            }
-
-            if (instance.pausedKeyboard)
-            {
-                instance.handleKeyboardInput = true;
-            }
-
-            Time.timeScale = 1f;
-            instance.pauseMenu.SetActive(false);
-        }
+			instance.ResumeGame();
+		}
 
 		public void QuitGame()
 		{
-            Application.Quit();
-        }
+			Application.Quit();
+		}
 
 		public void RestartGame()
 		{
-            SceneManager.LoadScene(0);
-        }
+			SceneManager.LoadScene(0);
+		}
 
 		public void SetMouseSensitivity(float value)
 		{
-            Leftovers_Player_PlayerController.MouseSensitivity = value;
-        }
+			PlayerController.MouseSensitivity = value;
+		}
 
 		public void SetVolume(float value)
 		{
-            AudioListener.volume = value;
-        }
-
-		public EventUtility()
-		{
+			AudioListener.volume = value;
 		}
 	}
 }

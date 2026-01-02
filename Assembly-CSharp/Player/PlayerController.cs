@@ -1,502 +1,23 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.Events;
+using Leftovers.General;
+using Leftovers.UI;
 
 namespace Leftovers.Player
 {
 	public class PlayerController : MonoBehaviour
 	{
-		public static PlayerController Instance
-		{
-			get
-			{
-				return null;
-			}
-			set
-			{
-			}
-		}
-
-		private void Awake()
-		{
-            Instance = this;
-        }
-
-		private void Start()
-		{
-            if (controlledCamera == null)
-                sub_180157B40(controlledCamera);
-
-            var cameraTransform = controlledCamera.transform;
-            cameraTransform.SetParent(cameraContainer, false);
-
-            cameraTransform.localPosition = Vector3.zero;
-            cameraTransform.localEulerAngles = Vector3.zero;
-
-            rotationX = 0f;
-
-            var myTransform = transform;
-            if (myTransform == null)
-                sub_180157B40(controlledCamera);
-
-            rotationY = myTransform.eulerAngles.y;
-        }
-
-		private void OnDestroy()
-		{
-            handleMouseInput = false;
-            Cursor.lockState = CursorLockMode.None;
-            Instance = null;
-        }
-
-		private void Update()
-		{
-            if (promptIndicator != null)
-                promptIndicator.SetActive(listenPrompt);
-
-            float deltaTime = Time.deltaTime;
-
-            if (handleKeyboardInput && characterController != null)
-            {
-                float Axis = Input.GetAxis("Horizontal");
-                float v7 = Input.GetAxis("Vertical");
-                Vector3 right = transform.right;
-                Vector3 forward = transform.forward;
-                Vector3 v132 = (right * Axis + forward * v7) * moveSpeed * deltaTime;
-                characterController.Move(v132);
-            }
-            else if (footstepsCoroutine != null)
-            {
-                StopCoroutine(footstepsCoroutine);
-                footstepsCoroutine = null;
-            }
-
-            if (lookAt != null)
-            {
-                if (handleMouseInput)
-                {
-                    float v35 = Input.GetAxis("Mouse X");
-                    float MouseSensitivity = Leftovers_Player_PlayerController_TypeInfo.MouseSensitivity;
-                    float v39 = Input.GetAxis("Mouse Y");
-                    float v41 = v39 * Leftovers_Player_PlayerController_TypeInfo.MouseSensitivity * cameraSpeed;
-                    promptRotationY += MouseSensitivity * v35 * cameraSpeed;
-                    promptRotationX = Mathf.Clamp(promptRotationX - v41, promptRotationXLimits.x, promptRotationXLimits.y);
-                    promptRotationY = Mathf.Clamp(promptRotationY, promptRotationYLimits.x, promptRotationYLimits.y);
-
-                    if (listenPrompt)
-                    {
-                        if (checkShake > 0)
-                        {
-                            int v45 = checkShake - 1;
-                            if (v45 == 1 && shakingThreshold.x > promptRotationY)
-                                checkShake = 1;
-                            else if (v45 == 2 && promptRotationY > shakingThreshold.y)
-                                checkShake = 2;
-                            numberOfShakes--;
-                        }
-                        if (checkNod > 0)
-                        {
-                            int v45 = checkNod - 1;
-                            if (v45 == 1 && noddingThreshold.x > promptRotationX)
-                                checkNod = 1;
-                            else if (v45 == 2 && promptRotationX <= noddingThreshold.y)
-                                checkNod = 2;
-                            numberOfNods--;
-                        }
-                        if (numberOfShakes <= 0)
-                            OnShake?.Invoke();
-                        if (numberOfNods > 0)
-                            OnNod?.Invoke();
-                    }
-                }
-
-                Vector3 position = lookAt.position;
-                if (cameraContainer != null)
-                {
-                    Vector3 v51 = cameraContainer.position;
-                    Vector3 direction = position - v51;
-                    Quaternion v56 = Quaternion.LookRotation(direction);
-                    Quaternion v57 = Quaternion.Euler(promptRotationX, promptRotationY, 0);
-                    Quaternion v58 = v56 * v57;
-                    cameraContainer.rotation = Quaternion.Slerp(cameraContainer.rotation, v58, promptLookSpeed * deltaTime);
-                    Vector3 euler = cameraContainer.rotation.eulerAngles;
-                    rotationY = euler.y;
-                    float x = euler.x;
-                    if (x < cameraRotationXLimits.x) x = cameraRotationXLimits.x;
-                    else if (x > cameraRotationXLimits.y) x -= 360f;
-                    rotationX = x;
-                }
-            }
-            else if (handleMouseInput)
-            {
-                rotationX = Mathf.Clamp(rotationX - Input.GetAxis("Mouse Y") * Leftovers_Player_PlayerController_TypeInfo.MouseSensitivity * cameraSpeed, cameraRotationXLimits.x, cameraRotationXLimits.y);
-                cameraContainer.localRotation = Quaternion.Euler(rotationX, 0, 0);
-                rotationY += Input.GetAxis("Mouse X") * Leftovers_Player_PlayerController_TypeInfo.MouseSensitivity * cameraSpeed;
-                Vector3 euler = transform.eulerAngles;
-                transform.eulerAngles = new Vector3(euler.x, rotationY, euler.z);
-            }
-
-            Vector3 groundPos = transform.position;
-            Vector3 v132 = groundPos;
-            fallingVelocity.y = Physics.CheckSphere(groundPos, groundCheckRadius, groundCheckLayerMask) ? 0 : fallingVelocity.y + deltaTime * gravity;
-            if (characterController != null)
-                characterController.Move(fallingVelocity * deltaTime);
-
-            if (listenPrompt && GameState.instance != null && GameState.instance.CanShowFood)
-            {
-                if (Input.GetMouseButtonDown(1))
-                    animator?.SetBool(HashBoolShowFood, true);
-                if (Input.GetMouseButtonUp(1))
-                    animator?.SetBool(HashBoolShowFood, false);
-                if (Input.GetKeyDown(KeyCode.Q))
-                    OnShowFood?.Invoke();
-            }
-
-            if (Input.GetKey(KeyCode.L))
-            {
-                for (int i = 0; i < 9; i++)
-                {
-                    if (Input.GetKeyDown(KeyCode.Alpha1 + i))
-                        OpenUIWithAnimation(i);
-                }
-            }
-
-            if (zoomPhase != 0)
-            {
-                if (zoomPhase == 1)
-                {
-                    zoomTimer += deltaTime;
-                    zoomAmount = Mathf.Lerp(zoomStartAmount, zoomIn, zoomTimer / zoomDuration);
-                    if (zoomTimer > zoomDuration)
-                    {
-                        zoomPhase = 0;
-                        zoomAmount = zoomIn;
-                    }
-                }
-                else if (zoomPhase == 2)
-                {
-                    zoomTimer += deltaTime;
-                    zoomAmount = Mathf.Lerp(zoomStartAmount, zoomOriginal, zoomTimer / zoomDuration);
-                    if (zoomTimer > zoomDuration)
-                    {
-                        zoomPhase = 0;
-                        zoomAmount = zoomOriginal;
-                    }
-                }
-            }
-
-            if (controlledCamera != null)
-                controlledCamera.transform.localPosition = Vector3.forward * zoomAmount;
-
-            if (canOpenEscape && Input.GetKeyDown(KeyCode.Escape))
-            {
-                paused = !paused;
-                if (!paused) ResumeGame();
-                else PauseGame();
-            }
-
-            if (cameraContainer != null && neighbourLookAt != null)
-            {
-                Vector3 v123 = cameraContainer.position;
-                Vector3 v125 = neighbourLookAt.position;
-                Vector3 forward = v123 - v125;
-                neighbourLookAt.forward = forward;
-            }
-        }
-
-		public void ResetRotationValues()
-		{
-            lookAt = lookAt;
-            promptRotationX = 0f;
-
-            if (lookAt != null)
-            {
-                if (cameraContainer != null)
-                {
-                    rotationY = cameraContainer.rotation.eulerAngles.y;
-                    return;
-                }
-            }
-
-            var t = this.transform;
-            if (t == null)
-                throw new NullReferenceException();
-
-            rotationY = t.eulerAngles.y;
-        }
-
-		private float GetLimitedRotationX(float rotation)
-		{
-            if (cameraRotationXLimits.x > rotation)
-                return cameraRotationXLimits.x;
-
-            if (rotation > cameraRotationXLimits.y)
-                return rotation - 360f;
-
-            return rotation;
-        }
-
-		private void CheckPrompt()
-		{
-            if (checkShake == 0)
-            {
-                if (shakingThreshold.x > promptRotationY || promptRotationY <= shakingThreshold.y)
-                    checkShake = 1;
-                --numberOfShakes;
-            }
-            else if (checkShake - 1 == 0)
-            {
-                if (promptRotationY > shakingThreshold.y)
-                {
-                    checkShake = 2;
-                    --numberOfShakes;
-                }
-            }
-            else if (checkShake - 1 == 1 && shakingThreshold.x > promptRotationY)
-            {
-                checkShake = 1;
-                --numberOfShakes;
-            }
-
-            if (checkNod == 0)
-            {
-                if (noddingThreshold.x > promptRotationX || promptRotationX <= noddingThreshold.y)
-                    checkNod = 1;
-                --numberOfNods;
-            }
-            else if (checkNod - 1 == 0)
-            {
-                if (promptRotationX > noddingThreshold.y)
-                {
-                    checkNod = 2;
-                    --numberOfNods;
-                }
-            }
-            else if (checkNod - 1 == 1 && noddingThreshold.x > promptRotationX)
-            {
-                checkNod = 1;
-                --numberOfNods;
-            }
-
-            if (numberOfShakes <= 0 && OnShake != null)
-            {
-                OnShake.Invoke();
-            }
-            else if (numberOfNods <= 0 && OnNod != null)
-            {
-                OnNod.Invoke();
-            }
-        }
-
-		public void ShowFood()
-		{
-            OnShowFood?.Invoke();
-        }
-
-		public void PutAwayFood()
-		{
-            if (animator == null)
-                throw new NullReferenceException();
-
-            UnityEngine.Animator animatorRef = animator;
-            animatorRef.SetBool(PlayerController.HashBoolShowFood, false);
-        }
-
-		public void RemoveFood()
-		{
-            if (animator == null)
-                throw new NullReferenceException();
-
-            animator.SetBool(PlayerController.HashBoolShowFood, false);
-            animator.Play("RemoveFood");
-
-            var gameState = Leftovers.General.GameState.Instance;
-            if (gameState == null)
-                throw new NullReferenceException();
-
-            gameState.NumberOfLeftOvers = gameState.NumberOfLeftOvers - 1;
-        }
-
-		public void SetLookAt(Transform lookAtTransform)
-		{
-            lookAt = lookAtTransform;
-        }
-
-		public void StartZoomIn(float duration)
-		{
-            zoomStartAmount = zoomAmount;
-            zoomDuration = duration;
-            zoomTimer = 0f;
-            zoomPhase = 1;
-        }
-
-		public void StartZoomOut(float duration)
-		{
-            Debug.Log("Starting zoom out");
-            zoomStartAmount = zoomAmount;
-            zoomDuration = duration;
-            zoomTimer = 0f;
-            zoomPhase = 2;
-        }
-
-		public void StartHandlingKeyboardInput()
-		{
-            handleKeyboardInput = true;
-        }
-
-		public void StopHandlingKeyboardInput()
-		{
-            handleKeyboardInput = false;
-        }
-
-		public void StartHandlingMouseInput()
-		{
-            handleMouseInput = true;
-            Cursor.lockState = CursorLockMode.Locked;
-        }
-
-		public void StopHandlingMouseInput()
-		{
-            handleMouseInput = false;
-            Cursor.lockState = CursorLockMode.None;
-        }
-
-		public void StartListeningToPrompt(UnityAction nodListener, UnityAction shakeListener, UnityAction showFoodListener)
-		{
-            listenPrompt = true;
-            promptRotationX = 0f;
-            numberOfNods = 4;
-            numberOfShakes = 4;
-            handleMouseInput = true;
-            Cursor.lockState = CursorLockMode.Locked;
-
-            OnNod?.AddListener(nodListener);
-            OnShake?.AddListener(shakeListener);
-            OnShowFood?.AddListener(showFoodListener);
-        }
-
-		public void StopListeningToPrompt(UnityAction nodListener, UnityAction shakeListener, UnityAction showFoodListener)
-		{
-            listenPrompt = false;
-            promptRotationX = 0f;
-            handleMouseInput = false;
-            Cursor.lockState = CursorLockMode.None;
-
-            if (animator != null)
-            {
-                animator.SetBool(HashBoolShowFood, false);
-            }
-
-            OnNod?.RemoveListener(nodListener);
-            OnShake?.RemoveListener(shakeListener);
-            OnShowFood?.RemoveListener(showFoodListener);
-        }
-
-		public void CopyCameraTransform(Transform copier)
-		{
-            if (cameraContainer == null || copier == null)
-            {
-                return;
-            }
-
-            copier.position = cameraContainer.position;
-            copier.rotation = cameraContainer.rotation;
-        }
-
-		public void PauseGame()
-		{
-            pausedMouse = handleMouseInput;
-            pausedKeyboard = handleKeyboardInput;
-            handleMouseInput = false;
-            handleKeyboardInput = false;
-            Cursor.lockState = CursorLockMode.None;
-            Time.timeScale = 0f;
-
-            if (pauseMenu == null) throw new NullReferenceException();
-            pauseMenu.SetActive(true);
-        }
-
-		public void ResumeGame()
-		{
-            if (pausedMouse)
-            {
-                handleMouseInput = true;
-                Cursor.lockState = CursorLockMode.Locked;
-            }
-
-            if (pausedKeyboard)
-                handleKeyboardInput = true;
-
-            Time.timeScale = 1f;
-
-            if (pauseMenu == null)
-                throw new NullReferenceException();
-
-            pauseMenu.SetActive(false);
-        }
-
-		public void CanOpenEscapeMenu()
-		{
-            canOpenEscape = true;
-        }
-
-		private IEnumerator PlayFootsteps()
-		{
-            return new PlayFootsteps_d__84(0) { __4__this = this };
-        }
-
-		public PlayerController()
-		{
-            HashBoolShowFood = Animator.StringToHash("ShowFood");
-            instance = null;
-            MouseSensitivity = 1.0f;
-
-            handleKeyboardInput = true;
-            moveSpeed = 1.0f;
-            gravity = -9.8f;
-            groundCheckRadius = 1.0f;
-            footstepsInterval = 0.5f;
-            cameraSpeed = 1.0f;
-            cameraRotationXLimits = Vector2.zero;
-            lookAtSpeed = 1.0f;
-            neighbourLookAtOffsetHeight = 0.1f;
-            neighbourLookAtOffsetDistance = 0.5f;
-            zoomIn = 2.0f;
-            promptLookSpeed = 1.0f;
-            promptRotationXLimits = Vector2.zero;
-            promptRotationYLimits = Vector2.zero;
-            noddingThreshold = Vector2.zero;
-            shakingThreshold = Vector2.zero;
-
-            OnNod = new UnityEvent();
-            OnShake = new UnityEvent();
-            OnShowFood = new UnityEvent();
-
-            fallingVelocity = Vector3.zero;
-        }
-
-		private void <Update>b__64_1()
-		{
-            handleKeyboardInput = true;
-            Cursor.lockState = CursorLockMode.Locked;
-        }
-
-		private static readonly int HashBoolShowFood;
-
+		public static readonly int HashBoolShowFood = Animator.StringToHash("ShowFood");
 		private static PlayerController instance;
-
-		public static float MouseSensitivity;
-
-		private const float PlatformSensitivity = 1f;
+		public static float MouseSensitivity = 1.0f;
 
 		[SerializeField]
-		private bool handleKeyboardInput;
+		public bool handleKeyboardInput;
 
 		[SerializeField]
-		private bool handleMouseInput;
+		public bool handleMouseInput;
 
 		[SerializeField]
 		private float moveSpeed;
@@ -565,7 +86,7 @@ namespace Leftovers.Player
 		private Transform cameraContainer;
 
 		[SerializeField]
-		private Animator animator;
+		public Animator animator;
 
 		[SerializeField]
 		private Transform neighbourLookAt;
@@ -580,51 +101,28 @@ namespace Leftovers.Player
 		private Transform[] shortcutTeleportations;
 
 		private bool listenPrompt;
-
-		private Transform lookAt;
-
+		public Transform lookAt;
 		private float promptRotationX;
-
 		private float promptRotationY;
-
 		private int checkShake;
-
 		private int checkNod;
-
 		private int numberOfShakes;
-
 		private int numberOfNods;
-
 		private UnityEvent OnNod;
-
 		private UnityEvent OnShake;
-
 		private UnityEvent OnShowFood;
-
 		private Vector3 fallingVelocity;
-
 		private float rotationX;
-
 		private float rotationY;
-
-		private PlayerController.ZoomPhase zoomPhase;
-
+		private ZoomPhase zoomPhase;
 		private float zoomDuration;
-
 		private float zoomTimer;
-
 		private float zoomStartAmount;
-
 		private float zoomAmount;
-
 		private bool paused;
-
 		private bool pausedMouse;
-
 		private bool pausedKeyboard;
-
 		private bool canOpenEscape;
-
 		private Coroutine footstepsCoroutine;
 
 		private enum ZoomPhase
@@ -634,101 +132,492 @@ namespace Leftovers.Player
 			Out
 		}
 
-		private sealed class <>c__DisplayClass64_0
+		public static PlayerController Instance
 		{
-			public <>c__DisplayClass64_0()
+			get
 			{
+				return instance;
 			}
-
-			internal void <Update>b__0()
+			set
 			{
-                var _4__this = this.__4__this;
-                if (_4__this == null || _4__this.characterController == null)
-                    return;
-
-                _4__this.characterController.enabled = false;
-
-                var transform = _4__this.transform;
-                if (transform == null)
-                    return;
-
-                var capturedIndex = this.captured;
-                if ((uint)capturedIndex >= _4__this.someArray.Length) // assuming __4__this field points to an array length
-                    throw new IndexOutOfRangeException();
-
-                var targetTransform = _4__this.someArray[capturedIndex];
-                if (targetTransform == null)
-                    return;
-
-                transform.position = targetTransform.position;
-                transform.eulerAngles = targetTransform.eulerAngles;
-
-                _4__this.rotationY = transform.eulerAngles.y;
-
-                if (_4__this.monitor == null)
-                    return;
-
-                _4__this.monitor.enabled = true;
-            }
-
-			public int captured;
-
-			public PlayerController <>4__this;
+				if (instance == null || value == null)
+				{
+					instance = value;
+				}
+				else
+				{
+					Destroy(value.gameObject);
+				}
+			}
 		}
 
-		private sealed class <PlayFootsteps>d__84 : IEnumerator<object>, IEnumerator, IDisposable
+		public PlayerController()
 		{
-			public <PlayFootsteps>d__84(int <>1__state)
+			handleKeyboardInput = true;
+			handleMouseInput = true;
+			moveSpeed = 1.0f;
+			gravity = -9.8f;
+			groundCheckRadius = 1.0f;
+			footstepsInterval = 0.5f;
+			cameraSpeed = 1.0f;
+			cameraRotationXLimits = Vector2.zero;
+			lookAtSpeed = 1.0f;
+			neighbourLookAtOffsetHeight = 0.1f;
+			neighbourLookAtOffsetDistance = 0.5f;
+			zoomIn = 2.0f;
+			promptLookSpeed = 1.0f;
+			promptRotationXLimits = Vector2.zero;
+			promptRotationYLimits = Vector2.zero;
+			noddingThreshold = Vector2.zero;
+			shakingThreshold = Vector2.zero;
+			OnNod = new UnityEvent();
+			OnShake = new UnityEvent();
+			OnShowFood = new UnityEvent();
+			fallingVelocity = Vector3.zero;
+		}
+
+		private void Awake()
+		{
+			Instance = this;
+		}
+
+		private void Start()
+		{
+			Transform cameraTransform = controlledCamera.transform;
+			cameraTransform.SetParent(cameraContainer);
+
+			cameraTransform.localPosition = Vector3.zero;
+			cameraTransform.localEulerAngles = Vector3.zero;
+
+			rotationX = 0f;
+			rotationY = transform.eulerAngles.y;
+		}
+
+		private void OnDestroy()
+		{
+			handleMouseInput = false;
+			Cursor.lockState = CursorLockMode.None;
+			Instance = null;
+		}
+
+		private void Update()
+		{
+			if (promptIndicator != null)
+				promptIndicator.SetActive(listenPrompt);
+
+			float deltaTime = Time.deltaTime;
+
+			if (handleKeyboardInput)
 			{
-		      __1__state = state;
+				float horizontal = Input.GetAxis("Horizontal");
+				float vertical = Input.GetAxis("Vertical");
+				Vector3 right = transform.right;
+				Vector3 forward = transform.forward;
+				Vector3 moveVector = (right * horizontal + forward * vertical) * moveSpeed * deltaTime;
+				if (characterController != null)
+					characterController.Move(moveVector);
+			}
+			else if (footstepsCoroutine != null)
+			{
+				StopCoroutine(footstepsCoroutine);
+				footstepsCoroutine = null;
 			}
 
-			private void Dispose()
+			if (lookAt != null)
 			{
-			}
-
-			private bool MoveNext()
-			{
-                var __this = this.__4__this;
-                if (this.__1__state > 1)
-                    return false;
-                this.__1__state = -1;
-
-                if (__this == null || __this.footstepsAudioSource == null)
-                    throw new NullReferenceException();
-
-                __this.footstepsAudioSource.PlayOneShot(__this.footstepsAudioClip);
-
-                this.__2__current = new UnityEngine.WaitForSeconds(__this.footstepsInterval);
-                this.__1__state = 1;
-                return true;
-			}
-
-			private object Current
-			{
-				get
+				if (handleMouseInput)
 				{
-					return null;
+					float mouseX = Input.GetAxis("Mouse X");
+					float mouseY = Input.GetAxis("Mouse Y");
+					float mouseYDelta = mouseY * MouseSensitivity * cameraSpeed;
+
+					promptRotationY += MouseSensitivity * mouseX * cameraSpeed;
+					promptRotationX = Mathf.Clamp(promptRotationX - mouseYDelta, promptRotationXLimits.x, promptRotationXLimits.y);
+					promptRotationY = Mathf.Clamp(promptRotationY, promptRotationYLimits.x, promptRotationYLimits.y);
+
+					if (listenPrompt)
+					{
+						CheckPrompt();
+					}
+				}
+
+				Vector3 lookAtPosition = lookAt.position;
+				Vector3 containerPosition = cameraContainer.position;
+				Vector3 direction = lookAtPosition - containerPosition;
+				Quaternion lookRotation = Quaternion.LookRotation(direction);
+				Quaternion promptRotation = Quaternion.Euler(promptRotationX, promptRotationY, 0f);
+				Quaternion targetRotation = lookRotation * promptRotation;
+				cameraContainer.rotation = Quaternion.Slerp(cameraContainer.rotation, targetRotation, promptLookSpeed * deltaTime);
+
+				Vector3 euler = cameraContainer.rotation.eulerAngles;
+				rotationY = euler.y;
+				float x = euler.x;
+				if (cameraRotationXLimits.x > x)
+					x = cameraRotationXLimits.x;
+				else if (x > cameraRotationXLimits.y)
+					x = x - 360f;
+				rotationX = x;
+			}
+			else if (handleMouseInput)
+			{
+				float mouseX = Input.GetAxis("Mouse X");
+				float mouseY = Input.GetAxis("Mouse Y");
+
+				rotationX = Mathf.Clamp(rotationX - mouseY * MouseSensitivity * cameraSpeed, cameraRotationXLimits.x, cameraRotationXLimits.y);
+				cameraContainer.localRotation = Quaternion.Euler(rotationX, 0f, 0f);
+
+				rotationY += mouseX * MouseSensitivity * cameraSpeed;
+				Vector3 euler = transform.eulerAngles;
+				transform.eulerAngles = new Vector3(euler.x, rotationY, euler.z);
+			}
+
+			Vector3 groundPos = transform.position;
+			bool isGrounded = Physics.CheckSphere(groundPos, groundCheckRadius, groundCheckLayerMask);
+			fallingVelocity.y = isGrounded ? 0f : fallingVelocity.y + deltaTime * gravity;
+			if (characterController != null)
+				characterController.Move(fallingVelocity * deltaTime);
+
+			if (listenPrompt && GameState.Instance != null && GameState.Instance.CanShowFood)
+			{
+				if (Input.GetMouseButtonDown(1) && animator != null)
+					animator.SetBool(HashBoolShowFood, true);
+				if (Input.GetMouseButtonUp(1) && animator != null)
+					animator.SetBool(HashBoolShowFood, false);
+				if (Input.GetKeyDown(KeyCode.Q))
+				{
+					if (OnShowFood != null)
+						OnShowFood.Invoke();
 				}
 			}
 
-			private void Reset()
+			if (Input.GetKey(KeyCode.L))
 			{
-			}
-
-			private object Current
-			{
-				get
+				for (int i = 0; i < 9; i++)
 				{
-					return null;
+					if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+						OpenUIWithAnimation(i);
 				}
 			}
 
-			private int <>1__state;
+			if (zoomPhase != ZoomPhase.None)
+			{
+				if (zoomPhase == ZoomPhase.In)
+				{
+					zoomTimer += deltaTime;
+					zoomAmount = Mathf.Lerp(zoomStartAmount, zoomIn, zoomTimer / zoomDuration);
+					if (zoomTimer > zoomDuration)
+					{
+						zoomPhase = ZoomPhase.None;
+						zoomAmount = zoomIn;
+					}
+				}
+				else if (zoomPhase == ZoomPhase.Out)
+				{
+					zoomTimer += deltaTime;
+					zoomAmount = Mathf.Lerp(zoomStartAmount, zoomOriginal, zoomTimer / zoomDuration);
+					if (zoomTimer > zoomDuration)
+					{
+						zoomPhase = ZoomPhase.None;
+						zoomAmount = zoomOriginal;
+					}
+				}
+			}
 
-			private object <>2__current;
+			if (controlledCamera != null)
+				controlledCamera.transform.localPosition = Vector3.forward * zoomAmount;
 
-			public PlayerController <>4__this;
+			if (canOpenEscape && Input.GetKeyDown(KeyCode.Escape))
+			{
+				paused = !paused;
+				if (!paused)
+					ResumeGame();
+				else
+					PauseGame();
+			}
+
+			if (cameraContainer != null && neighbourLookAt != null)
+			{
+				Vector3 forward = cameraContainer.forward;
+				Vector3 camPos = cameraContainer.position;
+				Vector3 up = Vector3.up;
+
+				Vector3 neighbourPos = camPos + forward * neighbourLookAtOffsetDistance + up * neighbourLookAtOffsetHeight;
+				neighbourLookAt.position = neighbourPos;
+
+				Vector3 lookDirection = cameraContainer.position - neighbourLookAt.position;
+				neighbourLookAt.forward = lookDirection;
+			}
+		}
+
+		private void OpenUIWithAnimation(int index)
+		{
+			handleKeyboardInput = false;
+			handleMouseInput = false;
+			Cursor.lockState = CursorLockMode.None;
+
+			int capturedIndex = index;
+			UIManager.Instance.FadeInAndOut(
+				() => {
+					if (characterController != null)
+						characterController.enabled = false;
+
+					if (capturedIndex < shortcutTeleportations.Length && shortcutTeleportations[capturedIndex] != null)
+					{
+						transform.position = shortcutTeleportations[capturedIndex].position;
+						transform.eulerAngles = shortcutTeleportations[capturedIndex].eulerAngles;
+						rotationY = transform.eulerAngles.y;
+					}
+
+					if (characterController != null)
+						characterController.enabled = true;
+				},
+				() => {
+					handleKeyboardInput = true;
+					handleMouseInput = true;
+					Cursor.lockState = CursorLockMode.Locked;
+				}
+			);
+		}
+
+		public void ResetRotationValues()
+		{
+			promptRotationX = 0f;
+			promptRotationY = 0f;
+
+			if (lookAt != null && cameraContainer != null)
+			{
+				rotationY = cameraContainer.rotation.eulerAngles.y;
+				return;
+			}
+
+			rotationY = transform.eulerAngles.y;
+		}
+
+		private float GetLimitedRotationX(float rotation)
+		{
+			if (cameraRotationXLimits.x > rotation)
+				return cameraRotationXLimits.x;
+
+			if (rotation > cameraRotationXLimits.y)
+				return rotation - 360f;
+
+			return rotation;
+		}
+
+		private void CheckPrompt()
+		{
+			if (checkShake == 0)
+			{
+				if (shakingThreshold.x > promptRotationY)
+				{
+					checkShake = 1;
+					numberOfShakes--;
+				}
+				else if (promptRotationY > shakingThreshold.y)
+				{
+					checkShake = 2;
+					numberOfShakes--;
+				}
+			}
+			else if (checkShake == 1)
+			{
+				if (promptRotationY > shakingThreshold.y)
+				{
+					checkShake = 2;
+					numberOfShakes--;
+				}
+			}
+			else if (checkShake == 2)
+			{
+				if (shakingThreshold.x > promptRotationY)
+				{
+					checkShake = 1;
+					numberOfShakes--;
+				}
+			}
+
+			if (checkNod == 0)
+			{
+				if (noddingThreshold.x > promptRotationX)
+				{
+					checkNod = 1;
+					numberOfNods--;
+				}
+				else if (promptRotationX > noddingThreshold.y)
+				{
+					checkNod = 2;
+					numberOfNods--;
+				}
+			}
+			else if (checkNod == 1)
+			{
+				if (promptRotationX > noddingThreshold.y)
+				{
+					checkNod = 2;
+					numberOfNods--;
+				}
+			}
+			else if (checkNod == 2)
+			{
+				if (noddingThreshold.x > promptRotationX)
+				{
+					checkNod = 1;
+					numberOfNods--;
+				}
+			}
+
+			if (numberOfShakes <= 0 && OnShake != null)
+			{
+				OnShake.Invoke();
+			}
+			else if (numberOfNods <= 0 && OnNod != null)
+			{
+				OnNod.Invoke();
+			}
+		}
+
+		public void ShowFood()
+		{
+			if (OnShowFood != null)
+				OnShowFood.Invoke();
+		}
+
+		public void PutAwayFood()
+		{
+			animator.SetBool(HashBoolShowFood, false);
+		}
+
+		public void RemoveFood()
+		{
+			animator.SetBool(HashBoolShowFood, false);
+			animator.Play("RemoveFood");
+			GameState.Instance.NumberOfLeftOvers = GameState.Instance.NumberOfLeftOvers - 1;
+		}
+
+		public void SetLookAt(Transform lookAtTransform)
+		{
+			lookAt = lookAtTransform;
+		}
+
+		public void StartZoomIn(float duration)
+		{
+			zoomStartAmount = zoomAmount;
+			zoomDuration = duration;
+			zoomTimer = 0f;
+			zoomPhase = ZoomPhase.In;
+		}
+
+		public void StartZoomOut(float duration)
+		{
+			Debug.Log("Starting zoom out");
+			zoomStartAmount = zoomAmount;
+			zoomDuration = duration;
+			zoomTimer = 0f;
+			zoomPhase = ZoomPhase.Out;
+		}
+
+		public void StartHandlingKeyboardInput()
+		{
+			handleKeyboardInput = true;
+		}
+
+		public void StopHandlingKeyboardInput()
+		{
+			handleKeyboardInput = false;
+		}
+
+		public void StartHandlingMouseInput()
+		{
+			handleMouseInput = true;
+			Cursor.lockState = CursorLockMode.Locked;
+		}
+
+		public void StopHandlingMouseInput()
+		{
+			handleMouseInput = false;
+			Cursor.lockState = CursorLockMode.None;
+		}
+
+		public void StartListeningToPrompt(UnityAction nodListener, UnityAction shakeListener, UnityAction showFoodListener)
+		{
+			listenPrompt = true;
+			promptRotationX = 0f;
+			promptRotationY = 0f;
+			checkNod = 0;
+			checkShake = 0;
+			numberOfNods = 4;
+			numberOfShakes = 4;
+			handleMouseInput = true;
+			Cursor.lockState = CursorLockMode.Locked;
+
+			OnNod.AddListener(nodListener);
+			OnShake.AddListener(shakeListener);
+			OnShowFood.AddListener(showFoodListener);
+		}
+
+		public void StopListeningToPrompt(UnityAction nodListener, UnityAction shakeListener, UnityAction showFoodListener)
+		{
+			listenPrompt = false;
+			promptRotationX = 0f;
+			promptRotationY = 0f;
+			handleMouseInput = false;
+			Cursor.lockState = CursorLockMode.None;
+
+			if (animator != null)
+				animator.SetBool(HashBoolShowFood, false);
+
+			OnNod.RemoveListener(nodListener);
+			OnShake.RemoveListener(shakeListener);
+			OnShowFood.RemoveListener(showFoodListener);
+		}
+
+		public void CopyCameraTransform(Transform copier)
+		{
+			if (cameraContainer == null || copier == null)
+				return;
+
+			copier.position = cameraContainer.position;
+			copier.rotation = cameraContainer.rotation;
+		}
+
+		public void PauseGame()
+		{
+			pausedMouse = handleMouseInput;
+			pausedKeyboard = handleKeyboardInput;
+			handleMouseInput = false;
+			handleKeyboardInput = false;
+			Cursor.lockState = CursorLockMode.None;
+			Time.timeScale = 0f;
+			pauseMenu.SetActive(true);
+		}
+
+		public void ResumeGame()
+		{
+			if (pausedMouse)
+			{
+				handleMouseInput = true;
+				Cursor.lockState = CursorLockMode.Locked;
+			}
+
+			if (pausedKeyboard)
+				handleKeyboardInput = true;
+
+			Time.timeScale = 1f;
+			pauseMenu.SetActive(false);
+		}
+
+		public void CanOpenEscapeMenu()
+		{
+			canOpenEscape = true;
+		}
+
+		private IEnumerator PlayFootsteps()
+		{
+			while (true)
+			{
+				footstepsAudioSource.PlayOneShot(footstepsAudioClip);
+				yield return new WaitForSeconds(footstepsInterval);
+			}
 		}
 	}
 }

@@ -6,6 +6,6 @@ namespace Leftovers.Utilities
 	{
 		FadeInAndOut,
 		FadeOut,
-		None
+		Instant
 	}
 }

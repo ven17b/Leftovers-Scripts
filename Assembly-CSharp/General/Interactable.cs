@@ -6,58 +6,6 @@ namespace Leftovers.General
 {
 	public class Interactable : Hoverable
 	{
-		public InteractionAnimationType AnimationType
-		{
-			get
-			{
-				return InteractionAnimationType.None;
-			}
-		}
-
-		public void StartInteract()
-		{
-            if (lockInteraction)
-            {
-                var interactor = Leftovers_General_Interactor.instance;
-                if (interactor != null)
-                {
-                    interactor.lockedInteraction = true;
-                    if (interactor.currentDetectedObject != null)
-                    {
-                        interactor.currentDetectedObject.StopHover();
-                        interactor.currentDetectedObject = null;
-                    }
-                }
-            }
-
-            onStartInteract?.Invoke();
-        }
-
-		public void StopInteract()
-		{
-            if (lockInteraction)
-            {
-                var interactor = Leftovers_General_Interactor.instance;
-                if (interactor != null)
-                {
-                    interactor.lockedInteraction = false;
-                }
-            }
-
-            onStopInteract?.Invoke();
-        }
-
-		public Interactable()
-		{
-            onStartInteract = new UnityEngine.Events.UnityEvent();
-            onStopInteract = new UnityEngine.Events.UnityEvent();
-
-            tooltip = string.Empty;
-
-            onStartHover = new UnityEngine.Events.UnityEvent();
-            onStopHover = new UnityEngine.Events.UnityEvent();
-        }
-
 		[SerializeField]
 		private UnityEvent onStartInteract;
 
@@ -69,5 +17,52 @@ namespace Leftovers.General
 
 		[SerializeField]
 		private bool lockInteraction;
+
+		public InteractionAnimationType AnimationType
+		{
+			get
+			{
+				return animationType;
+			}
+		}
+
+		public Interactable()
+		{
+			onStartInteract = new UnityEvent();
+			onStopInteract = new UnityEvent();
+		}
+
+		public void StartInteract()
+		{
+			if (lockInteraction)
+			{
+				Interactor instance = Interactor.Instance;
+				if (instance != null)
+				{
+					instance.lockedInteraction = true;
+					if (instance.currentDetectedObject != null)
+					{
+						instance.currentDetectedObject.StopHover();
+						instance.currentDetectedObject = null;
+					}
+				}
+			}
+			if (onStartInteract != null)
+				onStartInteract.Invoke();
+		}
+
+		public void StopInteract()
+		{
+			if (lockInteraction)
+			{
+				Interactor instance = Interactor.Instance;
+				if (instance != null)
+				{
+					instance.lockedInteraction = false;
+				}
+			}
+			if (onStopInteract != null)
+				onStopInteract.Invoke();
+		}
 	}
 }

@@ -5,42 +5,6 @@ namespace Leftovers.Neighbour
 {
 	public class DoorSoundEffect : MonoBehaviour
 	{
-		public void PlayDoorOpen()
-		{
-            if (!this->fields.audioSource)
-                sub_180157B40(this);
-
-            UnityEngine_AudioSource__PlayOneShot(
-                this->fields.audioSource,
-                this->fields.sfxDoorOpen,
-                0
-            );
-        }
-
-		public void PlayDoorClose()
-		{
-            if (!this->fields.audioSource)
-                sub_180157B40(this);
-
-            UnityEngine_AudioSource__PlayOneShot(this->fields.audioSource, this->fields.sfxDoorClose, 0);
-        }
-
-		public void PlayGrunt()
-		{
-            if (!this->fields.audioSource)
-                sub_180157B40(this);
-
-            UnityEngine_AudioSource__PlayOneShot(
-                this->fields.audioSource,
-                this->fields.sfxGrunt,
-                0
-            );
-        }
-
-		public DoorSoundEffect()
-		{
-		}
-
 		[SerializeField]
 		private AudioSource audioSource;
 
@@ -52,5 +16,23 @@ namespace Leftovers.Neighbour
 
 		[SerializeField]
 		private AudioClip sfxGrunt;
+
+		public void PlayDoorOpen()
+		{
+			if (audioSource != null && sfxDoorOpen != null)
+				audioSource.PlayOneShot(sfxDoorOpen);
+		}
+
+		public void PlayDoorClose()
+		{
+			if (audioSource != null && sfxDoorClose != null)
+				audioSource.PlayOneShot(sfxDoorClose);
+		}
+
+		public void PlayGrunt()
+		{
+			if (audioSource != null && sfxGrunt != null)
+				audioSource.PlayOneShot(sfxGrunt);
+		}
 	}
 }

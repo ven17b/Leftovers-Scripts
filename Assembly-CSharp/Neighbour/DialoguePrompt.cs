@@ -5,17 +5,15 @@ namespace Leftovers.Neighbour
 	[Serializable]
 	public class DialoguePrompt
 	{
-		public DialoguePrompt()
-		{
-            base.Dispose();
-        }
-
 		public string name;
 
-		public DialoguePromptOption optionNod;
+		public bool hasNod;
+		public int nodSegmentIndex;
 
-		public DialoguePromptOption optionShake;
+		public bool hasShake;
+		public int shakeSegmentIndex;
 
-		public DialoguePromptOption optionShowFood;
+		public bool hasShowFood;
+		public int showFoodSegmentIndex;
 	}
 }

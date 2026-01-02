@@ -8,7 +8,7 @@ namespace Leftovers.UI
 	{
 		private void OnEnable()
 		{
-            static bool initialized = false;
+            bool initialized = false;
             if (!initialized)
             {
                 initialized = true;
@@ -23,7 +23,7 @@ namespace Leftovers.UI
             var sliderMouseSensitivity = this.sliderMouseSensitivity;
             if (sliderMouseSensitivity != null)
             {
-                sliderMouseSensitivity.value = Leftovers.Player.PlayerController.mouseSensitivity;
+                sliderMouseSensitivity.value = Leftovers.Player.PlayerController.MouseSensitivity;
             }
         }
 

@@ -5,9 +5,8 @@ namespace Leftovers.Neighbour
 	public enum DialogueSegmentType
 	{
 		End,
-		Segment,
+		GoToSegment,
 		Prompt,
-		Complete,
-		Nothing
+		Complete
 	}
 }
